@@ -2,122 +2,49 @@
 
 class zookeeper ($server_id) {
 
-    require zookeeper::params
+	package { 'zookeeper':
+                ensure => "installed",
+        }	
 	
-	group { "${zookeeper::params::zookeeper_group}":
+
+	user { "zookeeper":
+                ensure => "present",
+                shell => "/bin/bash",
+                uid => 123123,
+        }    	
+
+	
+	file { "/etc/zookeeper/conf/environment":
+                ensure => present,
+                owner => "zookeeper",
+                group => "zookeeper",
+                mode => "644",
+        }
+
+	
+	file { "/etc/zookeeper/conf/zoo.cfg":
+		owner => "zookeeper",
+		group => "zookeeper",
+		mode => "644",
 		ensure => present,
-		gid => "800"
-	}
+		content => template("zookeeper/conf/zoo.cfg"),
+  	}
 
-	user { "${zookeeper::params::zookeeper_user}":
+   	
+   	file { "/etc/zookeeper/conf/myid":
 		ensure => present,
-		comment => "Zookeeper",
-		password => "!!",
-		uid => "800",
-		gid => "800",
-		shell => "/bin/bash",
-		home => "${zookeeper::params::zookeeper_user_path}",
-		require => Group["${zookeeper::params::zookeeper_group}"],
-	}
-	
-    file { "${zookeeper::params::zookeeper_user_path}/.bashrc":
-    	ensure => present,
-    	owner => "${zookeeper::params::zookeeper_user}",
-    	group => "${zookeeper::params::zookeeper_group}",
-    	alias => "${zookeeper::params::zookeeper_user}-bashrc",
-    	content => template("zookeeper/home/bashrc.erb"),
-    	require => [ User["${zookeeper::params::zookeeper_user}"], File["${zookeeper::params::zookeeper_user}-home"] ]
-    }
-    	
-	file { "${zookeeper::params::zookeeper_user_path}":
-		ensure => "directory",
-		owner => "${zookeeper::params::zookeeper_user}",
-		group => "${zookeeper::params::zookeeper_group}",
-		alias => "${zookeeper::params::zookeeper_user}-home",
-		require => [ User["${zookeeper::params::zookeeper_user}"], Group["${zookeeper::params::zookeeper_group}"] ]
-	}
- 
-	file {"${zookeeper::params::zookeeper_data_path}":
-		ensure => "directory",
-		owner => "${zookeeper::params::zookeeper_user}",
-		group => "${zookeeper::params::zookeeper_group}",
-		alias => "zookeeper-data-dir",
-		require => File["${zookeeper::params::zookeeper_user}-home"]
-	}
- 
-	file {"${zookeeper::params::zookeeper_base}":
-		ensure => "directory",
-		owner => "${zookeeper::params::zookeeper_user}",
-		group => "${zookeeper::params::zookeeper_group}",
-		alias => "zookeeper-base",
+		owner => "zookeeper",
+		group => "zookeeper",
+		mode => "644",
+		content => "$server_id",
 	}
 
- 	file {"${zookeeper::params::zookeeper_conf}":
-		ensure => "directory",
-		owner => "${zookeeper::params::zookeeper_user}",
-		group => "${zookeeper::params::zookeeper_group}",
-		alias => "zookeeper-conf",
-        require => [File["zookeeper-base"], Exec["untar-zookeeper"]],
-        before => [ File["zoo-cfg"] ]
-	}
- 
-	file { "${zookeeper::params::zookeeper_base}/zookeeper-${zookeeper::params::version}.tar.gz":
-		mode => 0644,
-		owner => "${zookeeper::params::zookeeper_user}",
-		group => "${zookeeper::params::zookeeper_group}",
-		source => "puppet:///modules/zookeeper/zookeeper-${zookeeper::params::version}.tar.gz",
-		alias => "zookeeper-source-tgz",
-		before => Exec["untar-zookeeper"],
-		require => File["zookeeper-base"]
-	}
-	
-	exec { "untar zookeeper-${zookeeper::params::version}.tar.gz":
-		command => "tar xfvz zookeeper-${zookeeper::params::version}.tar.gz",
-		cwd => "${zookeeper::params::zookeeper_base}",
-		creates => "${zookeeper::params::zookeeper_base}/zookeeper-${zookeeper::params::version}",
-		alias => "untar-zookeeper",
-		refreshonly => true,
-		subscribe => File["zookeeper-source-tgz"],
-		user => "${zookeeper::params::zookeeper_user}",
-		before => [ File["zookeeper-symlink"], File["zookeeper-app-dir"]],
-        path    => ["/bin", "/usr/bin", "/usr/sbin"],
-	}
+	file { "/var/log/zookeeper":
+                ensure => present,
+                recurse => true,
+		owner => "zookeeper",
+                group => "zookeeper",
+                mode => "644",
+        }
 
-	file { "${zookeeper::params::zookeeper_base}/zookeeper-${zookeeper::params::version}":
-		ensure => "directory",
-		mode => 0644,
-		owner => "${zookeeper::params::zookeeper_user}",
-		group => "${zookeeper::params::zookeeper_group}",
-		alias => "zookeeper-app-dir",
-        require => Exec["untar-zookeeper"],
-	}
-		
-	file { "${zookeeper::params::zookeeper_base}/zookeeper":
-		force => true,
-		ensure => "${zookeeper::params::zookeeper_base}/zookeeper-${zookeeper::params::version}",
-		alias => "zookeeper-symlink",
-		owner => "${zookeeper::params::zookeeper_user}",
-		group => "${zookeeper::params::zookeeper_group}",
-		require => File["zookeeper-source-tgz"],
-		before => [ File["zoo-cfg"] ]
-	}
-	
-    file { "${zookeeper::params::zookeeper_base}/zookeeper-${zookeeper::params::version}/conf/zoo.cfg":
-    	owner => "${zookeeper::params::zookeeper_user}",
-    	group => "${zookeeper::params::zookeeper_group}",
-    	mode => "644",
-    	alias => "zoo-cfg",
-        require => File["zookeeper-app-dir"],
-    	content => template("zookeeper/conf/zoo.cfg"),
-    }
-
-    file { "${zookeeper::params::zookeeper_data_path}/myid":
-        owner => "${zookeeper::params::zookeeper_user}",
-        group => "${zookeeper::params::zookeeper_group}",
-        mode => "644",
-        content => $server_id,
-        require => File["zookeeper-data-dir"],
-        alias => "zookeeper-myid",
-    }
-    
 }

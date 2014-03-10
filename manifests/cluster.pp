@@ -2,18 +2,20 @@
 
 class zookeeper::cluster ($server_id) {
 
-    require zookeeper::params
-
     class {'zookeeper':
         server_id => $server_id,
     }
 
     exec { "Launch zookeeper":
         command => "./zkServer.sh start",
-        user => "${zookeeper::params::zookeeper_user}",
-        cwd => "${zookeeper::params::zookeeper_base}/zookeeper-${zookeeper::params::version}/bin",
-        path    => ["/bin", "/usr/bin", "${zookeeper::params::zookeeper_base}/zookeeper-${zookeeper::params::version}/bin", "${java::params::java_base}/jdk${java::params::java_version}/bin"],
+	logoutput => "true",
+        user => "zookeeper",
+	group => "zookeeper",
+        cwd => "/usr/share/zookeeper/bin",
+	path    => ["/bin", "/usr/bin", "/usr/share/zookeeper/bin", "/usr/share/java", "/usr/bin/java"],
     }
+
+		
  
 }
 
